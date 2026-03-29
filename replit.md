@@ -2,7 +2,39 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+pnpm workspace monorepo using TypeScript + Python Telegram bot for Alpha Circle crypto auto-sender.
+
+## Alpha Circle Telegram Bot (`bot/`)
+
+A fully automated Telegram bot that scans DEX Screener for Solana coins and posts KOL-style alerts.
+
+### Features
+- Scans DEX Screener every ~5 minutes for coins with $120K–$50M+ market cap
+- Sends initial call with DEX Screener-style candlestick chart + green "NEW CALL" card
+- Tracks coins and sends gain updates at 20%, 50%, 1X, 2X, 3X, 5X, 10X milestones
+- Each update includes a Pepe/swamp-style achievement card (dark green, neon text)
+- Human-style KOL message templates (rotates randomly)
+- /start shows buttons: Add to Group, Support, Alpha Channel
+- No join/leave alerts in the group
+
+### Bot Files
+- `bot/bot.py` — Main bot logic, scanning loop, message sending
+- `bot/dex_fetcher.py` — DEX Screener API integration
+- `bot/chart_generator.py` — Candlestick chart image generator (dark DEX style)
+- `bot/image_generator.py` — Pepe/swamp achievement card generator (PIL)
+- `bot/requirements.txt` — Python dependencies
+- `bot/render.yaml` — Render deployment config
+- `bot/.env.example` — Environment variable template
+
+### Running
+`cd bot && python bot.py`
+
+### Deploy on Render
+1. Push to GitHub
+2. New Web Service → Worker type
+3. Set env vars: TELEGRAM_TOKEN, CHAT_ID, SUPPORT_USERNAME
+4. Build: `pip install -r requirements.txt`
+5. Start: `python bot.py`
 
 ## Stack
 

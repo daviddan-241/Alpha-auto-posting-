@@ -1,0 +1,26 @@
+Look https://chatgpt.com/s/t_69c882c0563c8191adc8ea60a09e9726
+Help me make this auto sends real kol,calls,and private messages with reminders and remember
+I want it to be telegram auto sender like to the. Group cause that's my private people pay for so I need something good TELEGRAM_TOKEN = "8765151932:AAFcxEoBl2Z9Iq4zJMCHlEr5yvBXK44Q8gY"  CHAT_ID = "-1003559583277"
+and I already created something like it and it sends chart style and the token image and not to short text and like human KOL,CALLS,PRIVATE style and in the normal bit when Dey tap start it adds to group and then support this username @crypto_guy02
+
+Look I don't want anybody that join or start the bot to be alerted in the group i want in the group it sends chart style new moving coin I already explained that now let them start sending immediately with some space in time and I want like the start should be individual like outside the the group with its start it show two buttons that's the add to group and the support you can other things to I don't know now do everything and give me complete code file path
+
+Here's the alpha channel
+https://t.me/AlphaCirclle
+now make it send and remove that my username under and put images , chart and whatever that image is and a file
+
+Nice but I mean let it generate its own image or the coin. Images and that's all
+
+Nice I like it but it's not sending the real CA like contract address and the target it to long like too long make the target smaller
+No I like the massage leave it and remember all should have an image just like this Entry MC: $25K
+* Target: $500K+ Reduce this target Target: $500K+
+
+Reduce the target again and I want the text to be human style and the mc that's sent is defferent from the DEX and I need other coins and I want like the target should be any time it moves by percent like 1X 1. Something percent with it's image
+
+Yes but I want it to be real with DEX like the same mc and liquidity and all with DEX
+
+Okay nice now I want new coins not only all those ones now finish it and deploy remember many other new or good  coins
+
+Now last thing can you do it so many coins from 120k mc to 50m or more mc would be sent and when it goes up like for example if it's 100k mc if it goes to 120k it sends
+
+And push all the code to my GitHub repo so I can deploy on render and uptime rebot
