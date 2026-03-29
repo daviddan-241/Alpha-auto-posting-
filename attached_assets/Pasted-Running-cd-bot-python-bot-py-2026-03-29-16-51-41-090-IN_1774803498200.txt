@@ -1,0 +1,57 @@
+Running 'cd bot && python bot.py'
+2026-03-29 16:51:41,090 | INFO | 🚀 Alpha Circle Bot starting...
+Traceback (most recent call last):
+  File "/opt/render/project/src/bot/bot.py", line 365, in <module>
+    main()
+    ~~~~^^
+  File "/opt/render/project/src/bot/bot.py", line 361, in main
+    app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/telegram/ext/_application.py", line 868, in run_polling
+    return self.__run(
+           ~~~~~~~~~~^
+        updater_coroutine=self.updater.start_polling(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<12 lines>...
+        stop_signals=stop_signals,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/telegram/ext/_application.py", line 1051, in __run
+    loop = asyncio.get_event_loop()
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/asyncio/events.py", line 715, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+                       % threading.current_thread().name)
+RuntimeError: There is no current event loop in thread 'MainThread'.
+<sys>:0: RuntimeWarning: coroutine 'Updater.start_polling' was never awaited
+==> Exited with status 1
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+==> Running 'cd bot && python bot.py'
+==> No open ports detected, continuing to scan...
+==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+Matplotlib is building the font cache; this may take a moment.
+2026-03-29 16:52:09,890 | INFO | 🚀 Alpha Circle Bot starting...
+Traceback (most recent call last):
+  File "/opt/render/project/src/bot/bot.py", line 365, in <module>
+    main()
+    ~~~~^^
+  File "/opt/render/project/src/bot/bot.py", line 361, in main
+    app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/telegram/ext/_application.py", line 868, in run_polling
+    return self.__run(
+           ~~~~~~~~~~^
+        updater_coroutine=self.updater.start_polling(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<12 lines>...
+        stop_signals=stop_signals,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/telegram/ext/_application.py", line 1051, in __run
+    loop = asyncio.get_event_loop()
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/asyncio/events.py", line 715, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+                       % threading.current_thread().name)
+RuntimeError: There is no current event loop in thread 'MainThread'.
+<sys>:0: RuntimeWarning: coroutine 'Updater.start_polling' was never awaited
