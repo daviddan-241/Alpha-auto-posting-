@@ -36,8 +36,8 @@ CHAT_ID = os.getenv("CHAT_ID", "-1003559583277")
 SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "@crypto_guy02")
 CHANNEL_LINK = "https://t.me/AlphaCirclle"
 
-MIN_MC = float(os.getenv("MIN_MC", 120_000))
-MAX_MC = float(os.getenv("MAX_MC", 50_000_000))
+MIN_MC = float(os.getenv("MIN_MC", 10_000))
+MAX_MC = float(os.getenv("MAX_MC", 800_000))
 SCAN_INTERVAL = int(os.getenv("SCAN_INTERVAL", 300))
 SEND_INTERVAL_MIN = int(os.getenv("SEND_INTERVAL_MIN", 30))
 SEND_INTERVAL_MAX = int(os.getenv("SEND_INTERVAL_MAX", 90))
@@ -277,7 +277,7 @@ async def start_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         f"I scan DEX Screener live and drop KOL-style calls "
         f"to the group with charts + gain cards every time a coin moves.\n\n"
         f"📊 *What I post:*\n"
-        f"• New coins ($120K–$50M MC)\n"
+        f"• New coins ($10K–$800K MC)\n"
         f"• Candlestick charts\n"
         f"• Gain updates at 20% · 50% · 1X · 2X · 3X · 5X · 10X\n\n"
         f"Add me to your group 👇"

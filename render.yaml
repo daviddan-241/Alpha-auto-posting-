@@ -14,9 +14,9 @@ services:
       - key: SUPPORT_USERNAME
         value: "@crypto_guy02"
       - key: MIN_MC
-        value: "120000"
+        value: "10000"
       - key: MAX_MC
-        value: "50000000"
+        value: "800000"
       - key: GAIN_THRESHOLD_PCT
         value: "20"
       - key: SCAN_INTERVAL
