@@ -14,11 +14,10 @@ from telegram.ext import (
     MessageHandler, filters
 )
 from telegram.constants import ParseMode
-from telegram.error import TelegramError
+from telegram.error import TelegramError, Conflict, RetryAfter
 
 from dex_fetcher import (
-    fetch_trending_tokens, fetch_new_coins, fetch_ohlcv_data,
-    format_mc
+    fetch_trending_tokens, fetch_new_coins, fetch_ohlcv_data, format_mc
 )
 from chart_generator import generate_chart_image
 from image_generator import generate_kol_card, generate_initial_call_image
@@ -31,19 +30,19 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "8765151932:AAFcxEoBl2Z9Iq4zJMCHlEr5yvBXK44Q8gY")
-CHAT_ID = os.getenv("CHAT_ID", "-1003559583277")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "8706555596:AAGE8SlGcu7b56B1kBD52jzxKjN3irWy6zk")
+CHAT_ID        = os.getenv("CHAT_ID", "-1003559583277")
 SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "@crypto_guy02")
-CHANNEL_LINK = "https://t.me/AlphaCirclle"
+CHANNEL_LINK   = "https://t.me/AlphaCirclle"
 
-MIN_MC = float(os.getenv("MIN_MC", 10_000))
-MAX_MC = float(os.getenv("MAX_MC", 800_000))
-SCAN_INTERVAL = int(os.getenv("SCAN_INTERVAL", 300))
-SEND_INTERVAL_MIN = int(os.getenv("SEND_INTERVAL_MIN", 30))
-SEND_INTERVAL_MAX = int(os.getenv("SEND_INTERVAL_MAX", 90))
+MIN_MC           = float(os.getenv("MIN_MC",           10_000))
+MAX_MC           = float(os.getenv("MAX_MC",          800_000))
+SCAN_INTERVAL    = int(os.getenv("SCAN_INTERVAL",         300))
+SEND_INTERVAL_MIN = int(os.getenv("SEND_INTERVAL_MIN",     30))
+SEND_INTERVAL_MAX = int(os.getenv("SEND_INTERVAL_MAX",     90))
 
 tracked_coins: dict = {}
-sent_updates: dict = {}
+sent_updates:  dict = {}
 last_sent_time: float = 0.0
 
 
@@ -53,6 +52,8 @@ KOL_TEMPLATES = [
     "💎 *{name}* UPDATE\n\nCalled at {entry_mc}, sitting at {current_mc} right now\n\n📈 *{gain_str}* move\n🕒 Time: {time_str}\n💰 Liq: {liq}\n\n📌 CA: `{ca}`\n\nHolding strong 💪\n\n{dex_url}",
     "🚀 *${symbol}* running!\n\nEntry: {entry_mc} → Now: {current_mc}\n+{gain}% since we called it\n\n💧 {liq} liquidity, still healthy\n\n`{ca}`\n\n{dex_url}",
     "Ayo *{name}* said let's go 🏃\n\nWas at {entry_mc}\nNow at {current_mc}\nThat's *{gain_str}* gains rn\n\n📍 `{ca}`\n💧 Liq: {liq}\n\n{dex_url}",
+    "📡 *Alpha Circle* just tracked a {gain_str} move on *{name}*\n\nEntry: {entry_mc} ✅\nNow: {current_mc} 🔥\n\nTime held: {time_str}\n📍 `{ca}`\n\n{dex_url}",
+    "🧠 We called *${symbol}* at {entry_mc}\nNow it's at {current_mc} — *{gain_str}* return\n\n💧 Liq: {liq} | Solana\n\nCA: `{ca}`\n\n{dex_url}\n\nStay locked in 👁",
 ]
 
 INITIAL_CALL_TEMPLATES = [
@@ -61,6 +62,8 @@ INITIAL_CALL_TEMPLATES = [
     "🔥 *{name}* — Fresh Call\n\n💰 Market Cap: {mc}\n💧 Liq: {liq} (healthy)\n📈 Vol: {vol}\n\n`{ca}`\n\nTarget: 2–4X from here 🎯\n\n{dex_url}",
     "New bag alert 🎒 *${symbol}*\n\nSolana gem — {mc} MC right now\nLiq sittin at {liq} — not bad\n\nCA: `{ca}`\n\n{dex_url}\n\nEarly entry fr 🚀",
     "💡 *{name}* — Low cap opportunity\n\nMC: {mc} | Vol: {vol}\nLiq: {liq}\n\n📌 `{ca}`\n\nIf this hits the right eyes it's going 🔺\n\n{dex_url}",
+    "🎯 Alpha spotted — *{name}*\n\nSolana · MC: {mc}\nVol: {vol} · Liq: {liq}\n\n`{ca}`\n\nRisk it for the biscuit 🍪\n\n{dex_url}",
+    "📊 *${symbol}* added to the watchlist\n\nEntry MC: {mc}\nLiquidity: {liq}\nVolume: {vol}\n\nCA: `{ca}`\n\nGem potential 💎\n\n{dex_url}",
 ]
 
 
@@ -82,20 +85,60 @@ async def _throttle():
     global last_sent_time
     now = time.time()
     gap = random.uniform(SEND_INTERVAL_MIN, SEND_INTERVAL_MAX)
-    if now - last_sent_time < gap:
-        await asyncio.sleep(gap - (now - last_sent_time))
+    elapsed = now - last_sent_time
+    if elapsed < gap:
+        await asyncio.sleep(gap - elapsed)
+
+
+async def _safe_send_photo(bot: Bot, **kwargs) -> bool:
+    for attempt in range(3):
+        try:
+            await bot.send_photo(**kwargs)
+            return True
+        except RetryAfter as e:
+            log.warning(f"Rate limited, sleeping {e.retry_after}s")
+            await asyncio.sleep(e.retry_after + 1)
+        except TelegramError as e:
+            log.error(f"Telegram error (attempt {attempt+1}): {e}")
+            if "Peer_id_invalid" in str(e) or "chat not found" in str(e).lower():
+                log.error("Bot not in group — make sure bot is added to the group!")
+                return False
+            await asyncio.sleep(3)
+        except Exception as e:
+            log.error(f"Send error: {e}")
+            await asyncio.sleep(3)
+    return False
+
+
+async def _safe_send_message(bot: Bot, **kwargs) -> bool:
+    for attempt in range(3):
+        try:
+            await bot.send_message(**kwargs)
+            return True
+        except RetryAfter as e:
+            await asyncio.sleep(e.retry_after + 1)
+        except TelegramError as e:
+            log.error(f"Telegram error (attempt {attempt+1}): {e}")
+            if "Peer_id_invalid" in str(e) or "chat not found" in str(e).lower():
+                log.error("Bot not in group — make sure bot is added to the group!")
+                return False
+            await asyncio.sleep(3)
+        except Exception as e:
+            log.error(f"Send error: {e}")
+            await asyncio.sleep(3)
+    return False
 
 
 async def send_initial_call(bot: Bot, token: dict):
     global last_sent_time
     await _throttle()
 
-    mc  = token.get("market_cap", 0)
-    liq = token.get("liquidity_usd", 0)
-    vol = token.get("volume_24h", 0)
-    ca  = token.get("address", "")
-    name   = token.get("name", token.get("symbol", "???"))
-    symbol = token.get("symbol", "???")
+    mc      = token.get("market_cap", 0)
+    liq     = token.get("liquidity_usd", 0)
+    vol     = token.get("volume_24h", 0)
+    ca      = token.get("address", "")
+    name    = token.get("name", token.get("symbol", "???"))
+    symbol  = token.get("symbol", "???")
     dex_url = token.get("url") or f"https://dexscreener.com/solana/{ca}"
 
     text = random.choice(INITIAL_CALL_TEMPLATES).format(
@@ -104,102 +147,101 @@ async def send_initial_call(bot: Bot, token: dict):
         ca=ca, dex_url=dex_url
     )
 
+    call_card = chart_img = None
     try:
-        call_card = chart_img = None
-        try:
-            call_card = generate_initial_call_image(token)
-        except Exception as e:
-            log.warning(f"Call card failed: {e}")
-        try:
-            bars = fetch_ohlcv_data(token.get("pair_address", ""))
-            chart_img = generate_chart_image(token, bars)
-        except Exception as e:
-            log.warning(f"Chart failed: {e}")
+        call_card = generate_initial_call_image(token)
+    except Exception as e:
+        log.warning(f"Call card failed: {e}")
+    try:
+        bars = fetch_ohlcv_data(token.get("pair_address", ""))
+        chart_img = generate_chart_image(token, bars)
+    except Exception as e:
+        log.warning(f"Chart failed: {e}")
 
-        if call_card:
-            await bot.send_photo(chat_id=CHAT_ID, photo=BytesIO(call_card),
-                                 caption=text, parse_mode=ParseMode.MARKDOWN)
-        elif chart_img:
-            await bot.send_photo(chat_id=CHAT_ID, photo=BytesIO(chart_img),
-                                 caption=text, parse_mode=ParseMode.MARKDOWN)
-        else:
-            await bot.send_message(chat_id=CHAT_ID, text=text, parse_mode=ParseMode.MARKDOWN)
+    sent = False
+    if call_card:
+        sent = await _safe_send_photo(bot, chat_id=CHAT_ID,
+                                      photo=BytesIO(call_card),
+                                      caption=text, parse_mode=ParseMode.MARKDOWN)
+    elif chart_img:
+        sent = await _safe_send_photo(bot, chat_id=CHAT_ID,
+                                      photo=BytesIO(chart_img),
+                                      caption=text, parse_mode=ParseMode.MARKDOWN)
+    else:
+        sent = await _safe_send_message(bot, chat_id=CHAT_ID,
+                                        text=text, parse_mode=ParseMode.MARKDOWN)
 
-        if call_card and chart_img:
-            await asyncio.sleep(random.uniform(2, 5))
-            await bot.send_photo(chat_id=CHAT_ID, photo=BytesIO(chart_img),
-                                 caption=f"📊 *{symbol}* Chart",
-                                 parse_mode=ParseMode.MARKDOWN)
+    if sent and call_card and chart_img:
+        await asyncio.sleep(random.uniform(2, 5))
+        await _safe_send_photo(bot, chat_id=CHAT_ID,
+                               photo=BytesIO(chart_img),
+                               caption=f"📊 *{symbol}* Chart",
+                               parse_mode=ParseMode.MARKDOWN)
 
+    if sent:
         last_sent_time = time.time()
         log.info(f"✅ Sent call: {symbol} MC={format_mc(mc)}")
-
-    except TelegramError as e:
-        log.error(f"Telegram error: {e}")
-    except Exception as e:
-        log.error(f"Send error: {e}")
 
 
 async def send_gain_update(bot: Bot, token: dict, entry_mc: float, gain_pct: float, called_at: str):
     global last_sent_time
     await _throttle()
 
-    mc     = token.get("market_cap", 0)
-    liq    = token.get("liquidity_usd", 0)
-    ca     = token.get("address", "")
-    name   = token.get("name", token.get("symbol", "???"))
-    symbol = token.get("symbol", "???")
+    mc      = token.get("market_cap", 0)
+    liq     = token.get("liquidity_usd", 0)
+    ca      = token.get("address", "")
+    name    = token.get("name", token.get("symbol", "???"))
+    symbol  = token.get("symbol", "???")
     dex_url = token.get("url") or f"https://dexscreener.com/solana/{ca}"
-    time_since = time.time() - tracked_coins.get(ca, {}).get("first_seen", time.time())
-    gain_s = _gain_str(gain_pct)
+    elapsed = time.time() - tracked_coins.get(ca, {}).get("first_seen", time.time())
+    gain_s  = _gain_str(gain_pct)
 
     text = random.choice(KOL_TEMPLATES).format(
         name=name, symbol=symbol,
         entry_mc=called_at, current_mc=format_mc(mc),
         gain=f"{gain_pct:.0f}", gain_str=gain_s,
         liq=format_mc(liq), ca=ca, dex_url=dex_url,
-        time_str=_fmt_time(time_since)
+        time_str=_fmt_time(elapsed)
     )
 
+    kol_card = chart_img = None
     try:
-        kol_card = chart_img = None
-        try:
-            kol_card = generate_kol_card(token, gain_pct, entry_mc, called_at)
-        except Exception as e:
-            log.warning(f"KOL card failed: {e}")
-        try:
-            bars = fetch_ohlcv_data(token.get("pair_address", ""))
-            chart_img = generate_chart_image(token, bars)
-        except Exception as e:
-            log.warning(f"Chart failed: {e}")
+        kol_card = generate_kol_card(token, gain_pct, entry_mc, called_at)
+    except Exception as e:
+        log.warning(f"KOL card failed: {e}")
+    try:
+        bars = fetch_ohlcv_data(token.get("pair_address", ""))
+        chart_img = generate_chart_image(token, bars)
+    except Exception as e:
+        log.warning(f"Chart failed: {e}")
 
-        if kol_card:
-            await bot.send_photo(chat_id=CHAT_ID, photo=BytesIO(kol_card),
-                                 caption=text, parse_mode=ParseMode.MARKDOWN)
-        else:
-            await bot.send_message(chat_id=CHAT_ID, text=text, parse_mode=ParseMode.MARKDOWN)
+    sent = False
+    if kol_card:
+        sent = await _safe_send_photo(bot, chat_id=CHAT_ID,
+                                      photo=BytesIO(kol_card),
+                                      caption=text, parse_mode=ParseMode.MARKDOWN)
+    else:
+        sent = await _safe_send_message(bot, chat_id=CHAT_ID,
+                                        text=text, parse_mode=ParseMode.MARKDOWN)
 
-        if chart_img:
-            await asyncio.sleep(random.uniform(1, 4))
-            await bot.send_photo(chat_id=CHAT_ID, photo=BytesIO(chart_img),
-                                 caption=f"📊 *{symbol}* Chart — {gain_s} from entry",
-                                 parse_mode=ParseMode.MARKDOWN)
+    if sent and chart_img:
+        await asyncio.sleep(random.uniform(1, 4))
+        await _safe_send_photo(bot, chat_id=CHAT_ID,
+                               photo=BytesIO(chart_img),
+                               caption=f"📊 *{symbol}* Chart — {gain_s} from entry",
+                               parse_mode=ParseMode.MARKDOWN)
 
+    if sent:
         last_sent_time = time.time()
         log.info(f"✅ Sent update: {symbol} {gain_s}")
-
-    except TelegramError as e:
-        log.error(f"Telegram error: {e}")
-    except Exception as e:
-        log.error(f"Send error: {e}")
 
 
 async def scan_and_send(bot: Bot):
     log.info("🔍 Scanning for coins...")
     try:
-        new_coins   = fetch_new_coins("solana", MIN_MC, MAX_MC)
-        trending    = fetch_trending_tokens("solana")
-        all_tokens  = {t["address"]: t for t in (new_coins + trending) if t.get("address")}
+        new_coins = fetch_new_coins("solana", MIN_MC, MAX_MC)
+        trending  = fetch_trending_tokens("solana")
+        all_tokens = {t["address"]: t for t in (new_coins + trending) if t.get("address")}
     except Exception as e:
         log.error(f"Fetch error: {e}")
         return
@@ -211,10 +253,10 @@ async def scan_and_send(bot: Bot):
 
         if ca not in tracked_coins:
             tracked_coins[ca] = {
-                "token": token,
-                "entry_mc": mc,
+                "token":        token,
+                "entry_mc":     mc,
                 "entry_mc_str": format_mc(mc),
-                "first_seen": time.time(),
+                "first_seen":   time.time(),
             }
             await send_initial_call(bot, token)
             await asyncio.sleep(random.uniform(5, 15))
@@ -237,7 +279,6 @@ async def scan_and_send(bot: Bot):
 
         tracked_coins[ca]["token"] = token
 
-    # Prune coins older than 3 days
     cutoff = time.time() - 86400 * 3
     for ca in [k for k, v in tracked_coins.items() if v.get("first_seen", 0) < cutoff]:
         tracked_coins.pop(ca, None)
@@ -267,9 +308,7 @@ async def start_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("💬 Support",
                                  url=f"https://t.me/{SUPPORT_USERNAME.lstrip('@')}"),
         ],
-        [
-            InlineKeyboardButton("📢 Alpha Channel", url=CHANNEL_LINK),
-        ]
+        [InlineKeyboardButton("📢 Alpha Channel", url=CHANNEL_LINK)]
     ])
     msg = (
         f"👋 Yo *{user.first_name}*!\n\n"
@@ -292,7 +331,6 @@ async def new_member_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def run_bot():
     log.info("🚀 Alpha Circle Bot starting...")
     app = Application.builder().token(TELEGRAM_TOKEN).build()
-
     app.add_handler(CommandHandler("start", start_handler))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, new_member_handler))
 
