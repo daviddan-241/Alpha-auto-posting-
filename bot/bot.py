@@ -107,6 +107,31 @@ def _start_health_server():
     log.warning("Health server could not bind to any port")
 
 
+# ─── Self-ping (keeps Render alive without UptimeRobot) ───────────────────────
+
+def _self_ping_loop():
+    """Ping our own health endpoint every 13 minutes so Render never sleeps."""
+    import requests as _req
+    url = os.getenv("RENDER_EXTERNAL_URL", "").rstrip("/")
+    if not url:
+        log.info("RENDER_EXTERNAL_URL not set — self-ping disabled")
+        return
+    ping_url = url + "/health"
+    log.info(f"🏓 Self-ping enabled → {ping_url}")
+    while True:
+        time.sleep(13 * 60)
+        try:
+            r = _req.get(ping_url, timeout=15)
+            log.info(f"🏓 Self-ping → {r.status_code}")
+        except Exception as e:
+            log.warning(f"🏓 Self-ping failed: {e}")
+
+
+def _start_self_ping():
+    t = threading.Thread(target=_self_ping_loop, daemon=True, name="self-ping")
+    t.start()
+
+
 # ─── Telegram helpers ─────────────────────────────────────────────────────────
 
 async def _throttle():
@@ -318,6 +343,7 @@ async def scan_and_send(bot: Bot):
 async def run_bot():
     log.info("🚀 Alpha Circle Bot starting...")
     _start_health_server()
+    _start_self_ping()
 
     while True:
         try:
