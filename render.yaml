@@ -1,11 +1,12 @@
 services:
-  - type: worker
+  - type: web
     name: alpha-circle-bot
     env: python
     region: oregon
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: cd bot && python bot.py
+    healthCheckPath: /
     envVars:
       - key: TELEGRAM_TOKEN
         sync: false
@@ -17,11 +18,9 @@ services:
         value: "10000"
       - key: MAX_MC
         value: "800000"
-      - key: GAIN_THRESHOLD_PCT
-        value: "20"
       - key: SCAN_INTERVAL
         value: "300"
       - key: SEND_INTERVAL_MIN
-        value: "120"
+        value: "60"
       - key: SEND_INTERVAL_MAX
-        value: "420"
+        value: "180"
