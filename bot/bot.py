@@ -235,7 +235,8 @@ async def send_gain_update(bot: Bot, token: dict,
 
     kol_card = chart_img = None
     try:
-        kol_card = generate_kol_card(token, gain_pct, entry_mc, called_at)
+        kol_card = generate_kol_card(token, gain_pct, entry_mc, called_at,
+                                     elapsed_str=_fmt_time(elapsed))
     except Exception as e:
         log.warning(f"KOL card error: {e}")
     try:
