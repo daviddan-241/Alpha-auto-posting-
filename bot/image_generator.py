@@ -98,7 +98,7 @@ def _make_card_base() -> Image.Image:
 
     # Semi-dark right panel for text readability
     for x in range(int(W * 0.42), W):
-        t = (x - W * 0.42) / (W * 0.58)
+        t = max(0.0, (x - W * 0.42) / (W * 0.58))
         a = int(160 * t ** 0.7)
         od.line([(x, 0), (x, H)], fill=(0, 0, 0, a))
 
