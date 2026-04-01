@@ -12,15 +12,13 @@ services:
         sync: false
       - key: CHAT_ID
         sync: false
-      - key: SUPPORT_USERNAME
-        value: "@crypto_guy02"
       - key: MIN_MC
         value: "10000"
       - key: MAX_MC
         value: "800000"
       - key: SCAN_INTERVAL
-        value: "300"
+        value: "180"
       - key: SEND_INTERVAL_MIN
-        value: "60"
+        value: "120"
       - key: SEND_INTERVAL_MAX
         value: "180"
