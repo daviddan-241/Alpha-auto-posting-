@@ -86,10 +86,13 @@ class _Health(BaseHTTPRequestHandler):
 
 
 def _start_health_server():
-    srv = HTTPServer(("0.0.0.0", PORT), _Health)
-    t = threading.Thread(target=srv.serve_forever, daemon=True)
-    t.start()
-    log.info(f"✅ Health server listening on port {PORT}")
+    try:
+        srv = HTTPServer(("0.0.0.0", PORT), _Health)
+        t = threading.Thread(target=srv.serve_forever, daemon=True)
+        t.start()
+        log.info(f"✅ Health server listening on port {PORT}")
+    except OSError as e:
+        log.warning(f"Health server skipped (port {PORT} unavailable): {e}")
 
 
 # ─── Telegram helpers ─────────────────────────────────────────────────────────
